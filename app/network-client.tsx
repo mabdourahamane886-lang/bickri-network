@@ -229,7 +229,7 @@ export default function NetworkClient() {
         <div className="actions">
           <button className="iconbtn" aria-label="Notifications"><Bell size={19}/></button>
           <button className="iconbtn" onClick={logout} aria-label="Se déconnecter"><LogOut size={19}/></button>
-          <div className="avatar mini" title={user?.email}>{avatarLabel(profile, user?.email)}</div>
+          <Link href="/profile" className="avatar mini" title={user?.email}>{avatarLabel(profile, user?.email)}</Link>
         </div>
       </header>
 
