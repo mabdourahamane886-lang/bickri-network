@@ -1,81 +1,54 @@
-const communities = [
-  { icon: "💼", name: "Bickri Service Agency", text: "IA, technologie, business, marketing et entrepreneuriat." },
-  { icon: "🇳🇪", name: "Le Niger et ses Merveilles", text: "Culture, patrimoine, tourisme et découvertes du Niger." },
-  { icon: "📖", name: "Nouroul Foua'ad", text: "Coran, Hadith, Tajwid, Fiqh et apprentissage." },
-];
+"use client";
 
-export default function Home() {
-  return (
-    <main className="shell">
-      <header className="topbar">
-        <div className="brand">BICKRI <span>NETWORK</span></div>
-        <div className="actions">
-          <button className="iconbtn" aria-label="Recherche">⌕</button>
-          <button className="iconbtn" aria-label="Notifications">🔔</button>
-          <button className="iconbtn" aria-label="Profil">👤</button>
-        </div>
-      </header>
+import { useEffect, useState } from "react";
+import { createClient } from "../lib/supabase";
+import { Bell, Bookmark, Camera, Heart, Home, LogIn, MessageCircle, MoreHorizontal, Search, Send, Share2, Sparkles, Users, Video } from "lucide-react";
+import Link from "next/link";
 
-      <div className="layout">
-        <aside className="sidebar">
-          <nav className="nav">
-            <a className="active" href="#">🏠 Accueil</a>
-            <a href="#">🔥 Découvrir</a>
-            <a href="#">👥 Communautés</a>
-            <a href="#">🎬 Vidéos</a>
-            <a href="#">💬 Messages</a>
-            <a href="#">🔖 Enregistrés</a>
-          </nav>
-        </aside>
+type Community={id:string;slug:string;name:string;description:string;icon:string;is_verified:boolean};
+type Post={id:string;author_id:string;community_id:string|null;content:string;created_at:string;profiles?:{full_name:string|null;avatar_url:string|null}|null;social_likes?:{user_id:string}[];social_comments?:{id:string}[]};
 
-        <section>
-          <div className="composer">
-            <input placeholder="Quoi de neuf dans votre communauté ?" />
-            <div className="composer-row">
-              <span>📷 Photo &nbsp; 🎥 Vidéo &nbsp; 📊 Sondage</span>
-              <button className="primary">Publier</button>
-            </div>
-          </div>
+const supabase=createClient();
 
-          <h2 className="section-title">🔥 À découvrir</h2>
+export default function HomePage(){
+  const [user,setUser]=useState<any>(null),[profile,setProfile]=useState<any>(null),[communities,setCommunities]=useState<Community[]>([]),[posts,setPosts]=useState<Post[]>([]);
+  const [text,setText]=useState(""),[selectedCommunity,setSelectedCommunity]=useState(""),[loading,setLoading]=useState(true),[publishing,setPublishing]=useState(false),[comment,setComment]=useState<Record<string,string>>({});
 
-          <article className="post">
-            <div className="posthead">
-              <div className="avatar">B</div>
-              <div><h3>Bickri Network</h3><span className="muted">Aujourd'hui · Public</span></div>
-            </div>
-            <p>Bienvenue sur Bickri Network — un espace pour connecter les talents, les cultures et les savoirs africains.</p>
-            <div className="tags"><span className="tag">#BickriNetwork</span><span className="tag">#Niger</span><span className="tag">#Afrique</span></div>
-          </article>
+  async function load(){
+    const {data:{user}}=await supabase.auth.getUser(); setUser(user);
+    if(user){const {data:p}=await supabase.from("profiles").select("full_name,avatar_url").eq("id",user.id).maybeSingle();setProfile(p);}
+    const {data:c}=await supabase.from("social_communities").select("*").order("name");setCommunities(c||[]);
+    const {data}=await supabase.from("social_posts").select("*,profiles!social_posts_author_id_fkey(full_name,avatar_url),social_likes(user_id),social_comments(id)").order("created_at",{ascending:false}).limit(30);
+    setPosts((data as Post[])||[]);setLoading(false);
+  }
+  useEffect(()=>{load();const {data}=supabase.auth.onAuthStateChange(()=>load());return()=>data.subscription.unsubscribe()},[]);
 
-          <article className="post">
-            <div className="posthead">
-              <div className="avatar">🇳🇪</div>
-              <div><h3>Le Niger et ses Merveilles</h3><span className="muted">Communauté · Niger</span></div>
-            </div>
-            <p>Découvrez les régions, les traditions, les paysages et les histoires qui font la richesse du Niger.</p>
-          </article>
-        </section>
+  async function publish(){
+    if(!user){window.location.href="/auth";return} if(!text.trim())return; setPublishing(true);
+    const {error}=await supabase.from("social_posts").insert({author_id:user.id,content:text.trim(),community_id:selectedCommunity||null,visibility:"public"});
+    if(error)alert(error.message);else{setText("");setSelectedCommunity("");await load()} setPublishing(false);
+  }
+  async function like(post:Post){
+    if(!user){window.location.href="/auth";return} const liked=post.social_likes?.some(x=>x.user_id===user.id);
+    if(liked)await supabase.from("social_likes").delete().eq("post_id",post.id).eq("user_id",user.id);else await supabase.from("social_likes").insert({post_id:post.id,user_id:user.id});await load();
+  }
+  async function addComment(postId:string){
+    if(!user){window.location.href="/auth";return}const value=comment[postId]?.trim();if(!value)return;
+    const {error}=await supabase.from("social_comments").insert({post_id:postId,author_id:user.id,content:value});
+    if(error)alert(error.message);else{setComment({...comment,[postId]:""});await load()}
+  }
 
-        <aside className="rightbar">
-          <h2 className="section-title">Communautés</h2>
-          {communities.map((community) => (
-            <div className="community" key={community.name}>
-              <h3>{community.icon} {community.name}</h3>
-              <div className="muted">{community.text}</div>
-              <button className="primary cta">Rejoindre</button>
-            </div>
-          ))}
-        </aside>
-      </div>
-
-      <nav className="mobile-nav">
-        <a href="#"><strong>🏠</strong>Accueil</a>
-        <a href="#"><strong>🔥</strong>Découvrir</a>
-        <a href="#"><strong>➕</strong>Publier</a>
-        <a href="#"><strong>💬</strong>Messages</a>
-        <a href="#"><strong>👤</strong>Profil</a>
-      </nav>
-    </main>
-  );
+  return <main className="shell">
+    <header className="topbar"><Link href="/" className="brand">BICKRI <span>NETWORK</span></Link><div className="searchbox"><Search size={17}/><input placeholder="Rechercher sur Bickri Network"/></div><div className="actions"><button className="iconbtn"><Bell size={19}/></button><Link className="iconbtn" href="/auth">{user?<Users size={19}/>:<LogIn size={19}/>}</Link>{user&&<button className="avatar mini">{(profile?.full_name||user.email||"B").slice(0,1).toUpperCase()}</button>}</div></header>
+    <div className="layout">
+      <aside className="sidebar"><nav className="nav"><a className="active" href="#accueil"><Home size={18}/>Accueil</a><a href="#decouvrir"><Sparkles size={18}/>Découvrir</a><a href="#communautes"><Users size={18}/>Communautés</a><a href="#videos"><Video size={18}/>Vidéos</a><a href="#messages"><MessageCircle size={18}/>Messages</a><a href="#enregistres"><Bookmark size={18}/>Enregistrés</a></nav></aside>
+      <section className="feed" id="accueil">
+        <div className="welcome"><div><span className="eyebrow">BICKRI NETWORK</span><h1>Votre communauté. Vos idées. Votre Afrique.</h1><p>Publiez, échangez et découvrez des personnes et des communautés qui vous intéressent.</p></div><div className="welcome-icon">B</div></div>
+        <div className="composer"><div className="composer-head"><div className="avatar">{user?(profile?.full_name||user.email||"B").slice(0,1).toUpperCase():"B"}</div><input value={text} onChange={e=>setText(e.target.value)} placeholder={user?"Quoi de neuf ?":"Connectez-vous pour publier..."}/></div><div className="composer-row"><div className="composer-tools"><span><Camera size={17}/>Photo</span><span><Video size={17}/>Vidéo</span><span><Sparkles size={17}/>Sondage</span></div><select value={selectedCommunity} onChange={e=>setSelectedCommunity(e.target.value)}><option value="">Aucune communauté</option>{communities.map(c=><option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}</select><button className="primary" disabled={publishing} onClick={publish}>{publishing?"Publication…":"Publier"}</button></div></div>
+        {loading?<div className="loading">Chargement du fil…</div>:posts.length===0?<div className="empty"><Sparkles size={28}/><h3>Votre fil commence ici</h3><p>Publiez la première actualité de Bickri Network.</p></div>:posts.map(post=>{const liked=!!post.social_likes?.some(x=>x.user_id===user?.id),author=post.profiles?.full_name||"Membre Bickri";return <article className="post" key={post.id}><div className="posthead"><div className="avatar">{author.slice(0,1).toUpperCase()}</div><div className="post-author"><h3>{author}</h3><span className="muted">{new Date(post.created_at).toLocaleString("fr-FR",{dateStyle:"medium",timeStyle:"short"})}</span></div><button className="more"><MoreHorizontal size={19}/></button></div><p className="post-content">{post.content}</p><div className="post-actions"><button className={liked?"liked":""} onClick={()=>like(post)}><Heart size={18} fill={liked?"currentColor":"none"}/>{post.social_likes?.length||0}</button><button><MessageCircle size={18}/>{post.social_comments?.length||0}</button><button><Share2 size={18}/>Partager</button><button><Bookmark size={18}/></button></div><div className="comment-box"><input value={comment[post.id]||""} onChange={e=>setComment({...comment,[post.id]:e.target.value})} placeholder="Écrire un commentaire…"/><button onClick={()=>addComment(post.id)}><Send size={17}/></button></div></article>})}
+      </section>
+      <aside className="rightbar" id="communautes"><h2 className="section-title">Communautés</h2>{communities.map(c=><div className="community" key={c.id}><div className="community-icon">{c.icon}</div><h3>{c.name} {c.is_verified&&<span className="verified">✓</span>}</h3><div className="muted">{c.description}</div><button className="primary cta" onClick={async()=>{if(!user){window.location.href="/auth";return}const {error}=await supabase.from("social_community_members").upsert({community_id:c.id,user_id:user.id});if(error)alert(error.message);else alert("Vous avez rejoint cette communauté.")}}>Rejoindre</button></div>)}</aside>
+    </div>
+    <nav className="mobile-nav"><a href="#accueil"><Home size={20}/>Accueil</a><a href="#decouvrir"><Sparkles size={20}/>Découvrir</a><a href="#communautes"><Users size={20}/>Communautés</a><a href="#messages"><MessageCircle size={20}/>Messages</a><Link href="/auth"><Users size={20}/>Profil</Link></nav>
+  </main>
 }
