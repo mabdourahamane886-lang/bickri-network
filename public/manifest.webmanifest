@@ -1,0 +1,10 @@
+{
+  "name": "Bickri Network",
+  "short_name": "Bickri",
+  "description": "Le réseau social de Bickri Network.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f3f6fa",
+  "theme_color": "#071a35",
+  "lang": "fr"
+}
