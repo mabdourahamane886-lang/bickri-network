@@ -3,13 +3,10 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Bickri Network",
-  description: "Connecter les talents, les cultures et les savoirs.",
+  description: "Le réseau social qui connecte les talents, les cultures et les savoirs.",
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return (
-    <html lang="fr">
-      <body>{children}</body>
-    </html>
-  );
+  return <html lang="fr"><body>{children}</body></html>;
 }
