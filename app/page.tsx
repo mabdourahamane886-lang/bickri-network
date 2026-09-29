@@ -4,9 +4,9 @@ import NetworkClient from "./network-client";
 
 export default async function HomePage() {
   const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { claims } } = await supabase.auth.getClaims();
 
-  if (!user) redirect("/auth");
+  if (!claims?.sub) redirect("/auth");
 
   return <NetworkClient />;
 }
