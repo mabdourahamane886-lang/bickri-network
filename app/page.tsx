@@ -18,8 +18,12 @@ export default function HomePage(){
     const {data:{user}}=await supabase.auth.getUser(); setUser(user);
     if(user){const {data:p}=await supabase.from("profiles").select("full_name,avatar_url").eq("id",user.id).maybeSingle();setProfile(p);}
     const {data:c}=await supabase.from("social_communities").select("*").order("name");setCommunities(c||[]);
-    const {data}=await supabase.from("social_posts").select("*,profiles!social_posts_author_id_fkey(full_name,avatar_url),social_likes(user_id),social_comments(id)").order("created_at",{ascending:false}).limit(30);
-    setPosts((data as Post[])||[]);setLoading(false);
+    const {data}=await supabase.from("social_posts").select("*,social_likes(user_id),social_comments(id)").order("created_at",{ascending:false}).limit(30);
+    const raw=(data as Post[])||[];
+    const ids=[...new Set(raw.map(p=>p.author_id))];
+    const {data:authors}=ids.length?await supabase.from("profiles").select("id,full_name,avatar_url").in("id",ids):{data:[]};
+    const byId=new Map((authors||[]).map((p:any)=>[p.id,p]));
+    setPosts(raw.map(p=>({...p,profiles:byId.get(p.author_id)||null})));setLoading(false);
   }
   useEffect(()=>{load();const {data}=supabase.auth.onAuthStateChange(()=>load());return()=>data.subscription.unsubscribe()},[]);
 
