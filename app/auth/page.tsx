@@ -35,7 +35,7 @@ export default function AuthPage() {
     <form onSubmit={submit}>
       {mode==="signup"&&<input required value={name} onChange={e=>setName(e.target.value)} placeholder="Nom complet"/>}
       <label><Mail size={17}/><input required type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Adresse e-mail"/></label>
-      <label><LockKeyhole size={17}/><input required minLength={6} type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Mot de passe"/></label>
+      <label><LockKeyhole size={17}/><input required minLength={8} type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Mot de passe (8 caractères minimum)"/></label>
       <button className="primary auth-submit" disabled={loading}>{loading?<Loader2 className="spin" size={18}/>:null}{mode==="login"?"Se connecter":"Créer mon compte"}</button>
     </form>
     {message&&<div className="notice">{message}</div>}
